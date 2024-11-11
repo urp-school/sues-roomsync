@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<mvc>
+  <profile name="openurp-edu-room-ws" package="net.openurp.sues.room.ws">
+    <action suffix="WS" defaultMethod="index" />
+    <url path="/" suffix="" style="plur-seo" />
+  </profile>
+</mvc>
