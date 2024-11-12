@@ -58,14 +58,18 @@ class RoomWS extends ActionSupport, Initializing, Logging {
     if Strings.isBlank(units) then return "缺少参数:units,类似units=3-4;3-5"
     val minCapacity = getInt("minCapacity", 1)
 
+    val debug = getBoolean("debug", false)
     val unitPairs = convertUnits(units)
-    val freeRooms = Collections.newBuffer[Set[String]]
+    val freeRooms = Collections.newBuffer[List[String]]
     unitPairs foreach { unitPair =>
       val r = getFreeRooms(schoolYear, semesterName, weeks, unitPair._1, unitPair._2._1, unitPair._2._2, minCapacity)
       freeRooms.addOne(r)
     }
     if (freeRooms.size == 1) {
-      logger.debug(freeRooms.head.mkString(","))
+      if (debug) {
+        logger.info(s"${schoolYear} ${semesterName} ${weekNum} ${units}")
+        logger.info(freeRooms.head.mkString(","))
+      }
       freeRooms.head.mkString(",")
     } else {
       var first = freeRooms.head
@@ -73,7 +77,10 @@ class RoomWS extends ActionSupport, Initializing, Logging {
         val second = freeRooms(i)
         first = first.intersect(second)
       }
-      logger.debug(first.mkString(","))
+      if (debug) {
+        logger.info(s"${schoolYear} ${semesterName} ${weekNum} ${units}")
+        logger.info(first.mkString(","))
+      }
       first.mkString(",")
     }
   }
@@ -176,15 +183,11 @@ class RoomWS extends ActionSupport, Initializing, Logging {
     JsonQuery.get(json, "msg").toString
   }
 
-  private def getFreeRooms(schoolYear: String, semesterName: String, weeks: List[Int],
-                           weekday: Int, startUnit: Int, endUnit: Int, minCapacity: Int): Set[String] = {
+  private def getFreeRooms(year: String, term: String, weeks: List[Int],
+                           weekday: Int, startUnit: Int, endUnit: Int, minCapacity: Int): List[String] = {
     val body =
-      s"""
-         |{
-         |"year":"${schoolYear}","semester":"${semesterName}","weeks":"${weeks.mkString(",")}","week":"${weekday}","startUnit":"${startUnit}",
-         |"endUnit":"${endUnit}","building":""
-         |}
-         |""".stripMargin.trim()
+      s"""{"year":"${year}","semester":"${term}","weeks":"${weeks.mkString(",")}","week":"${weekday}","startUnit":"${startUnit}","endUnit":"${endUnit}","building":""}"""
+
     val timestamp = formater.format(LocalDateTime.now)
     val sign = s"appCode=${appCode}&timestamp=${timestamp}&secret=${secret}"
     val signature = Digests.md5Hex(sign).toLowerCase
@@ -197,7 +200,9 @@ class RoomWS extends ActionSupport, Initializing, Logging {
     r.header("accept", "application/json")
     r.header("content-type", "application/json")
     r.timeout(Duration.ofSeconds(10))
-    logger.debug(body)
+    if (getBoolean("debug", false)) {
+      logger.info(body)
+    }
     r.POST(HttpRequest.BodyPublishers.ofString(body))
 
     //val res = sample
@@ -206,9 +211,27 @@ class RoomWS extends ActionSupport, Initializing, Logging {
     if (JsonQuery.get(json, "code").toString == "200") {
       val rooms = JsonQuery.get(json, "data").asInstanceOf[ju.ArrayList[ju.Map[String, Any]]]
       import scala.jdk.javaapi.CollectionConverters.asScala
-      asScala(rooms).filter(room => room.get("seats").toString.toInt >= minCapacity).map(room => room.get("nameZh").asInstanceOf[String]).toSet
+      customFilter(asScala(rooms), weekday, startUnit, endUnit).filter(room => room.get("seats").toString.toInt >= minCapacity).map(room => room.get("nameZh").asInstanceOf[String]).toSet.toList.sorted
     } else {
-      Set.empty
+      List.empty
+    }
+  }
+
+  private def customFilter(rooms: mutable.Buffer[ju.Map[String, Any]], weekday: Int, startUnit: Int, endUnit: Int): mutable.Buffer[ju.Map[String, Any]] = {
+    if (startUnit == 3 && endUnit == 4) {
+      //3，4节不能安排A，F楼
+      rooms.filter { room =>
+        val name = room.get("nameZh").asInstanceOf[String]
+        !(name.startsWith("A") || name.startsWith("F"))
+      }
+    } else if (startUnit == 4 && endUnit == 5) {
+      //4，5节只能安排到A，F楼
+      rooms.filter { room =>
+        val name = room.get("nameZh").asInstanceOf[String]
+        name.startsWith("A") || name.startsWith("F")
+      }
+    } else {
+      rooms
     }
   }
 

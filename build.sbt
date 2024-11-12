@@ -26,8 +26,6 @@ ThisBuild / homepage := Some(url("https://beangle.github.io/urp-school/sues-room
 val apiVer = "0.41.9"
 val starterVer = "0.3.43"
 val baseVer = "0.4.41"
-val openurp_std_api = "org.openurp.std" % "openurp-std-api" % apiVer
-val openurp_edu_api = "org.openurp.edu" % "openurp-edu-api" % apiVer
 
 lazy val root = (project in file("."))
   .enablePlugins(WarPlugin, TomcatPlugin)
@@ -36,6 +34,5 @@ lazy val root = (project in file("."))
     common,
     libraryDependencies ++= Seq(beangle_commons, beangle_ems_app, beangle_webmvc, beangle_serializer),
     libraryDependencies ++= Seq(beangle_model, beangle_cdi),
-    libraryDependencies += "org.apache.httpcomponents" % "httpclient" % "4.5.14",
-    libraryDependencies ++= Seq(spring_context, spring_beans, spring_tx, spring_jdbc)
+    libraryDependencies ++= Seq(spring_context, spring_beans)
   )
