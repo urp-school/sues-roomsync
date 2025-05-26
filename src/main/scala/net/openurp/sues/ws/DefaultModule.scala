@@ -15,15 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.openurp.sues.room.ws
+package net.openurp.sues.ws
 
-import org.beangle.cdi.bind.BindModule
+import org.beangle.commons.cdi.BindModule
 import org.beangle.ems.app.EmsApp
 
 class DefaultModule extends BindModule {
   protected override def binding(): Unit = {
     bind(classOf[RoomWS])
-      .property("appCode",EmsApp.properties("roomAppCode"))
-      .property("secret",EmsApp.properties("roomSecret"))
+      .property("appCode", EmsApp.properties("roomAppCode"))
+      .property("secret", EmsApp.properties("roomSecret"))
+
+    bind(classOf[StudentWS])
   }
 }

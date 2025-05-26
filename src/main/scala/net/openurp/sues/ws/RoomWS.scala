@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package net.openurp.sues.room.ws
+package net.openurp.sues.ws
 
 import com.google.gson.Gson
 import org.beangle.commons.bean.Initializing
@@ -25,8 +25,8 @@ import org.beangle.commons.json.JsonQuery
 import org.beangle.commons.lang.Strings
 import org.beangle.commons.lang.time.{WeekDay, WeekState}
 import org.beangle.commons.logging.Logging
-import org.beangle.web.action.annotation.{mapping, param, response}
-import org.beangle.web.action.support.ActionSupport
+import org.beangle.webmvc.annotation.{mapping, param, response}
+import org.beangle.webmvc.support.ActionSupport
 
 import java.net.URI
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
@@ -180,9 +180,20 @@ class RoomWS extends ActionSupport, Initializing, Logging {
     val res = client.send(r.build(), HttpResponse.BodyHandlers.ofString()).body()
     logger.info(res)
     val json = gson.fromJson(res, classOf[ju.Map[String, Object]])
-    JsonQuery.get(json, "msg").toString
+    JsonQuery.get(json, "data").toString
   }
 
+  /** 空闲教室的代码
+   *
+   * @param year
+   * @param term
+   * @param weeks
+   * @param weekday
+   * @param startUnit
+   * @param endUnit
+   * @param minCapacity
+   * @return
+   */
   private def getFreeRooms(year: String, term: String, weeks: List[Int],
                            weekday: Int, startUnit: Int, endUnit: Int, minCapacity: Int): List[String] = {
     val body =
@@ -211,7 +222,7 @@ class RoomWS extends ActionSupport, Initializing, Logging {
     if (JsonQuery.get(json, "code").toString == "200") {
       val rooms = JsonQuery.get(json, "data").asInstanceOf[ju.ArrayList[ju.Map[String, Any]]]
       import scala.jdk.javaapi.CollectionConverters.asScala
-      customFilter(asScala(rooms), weekday, startUnit, endUnit).filter(room => room.get("seats").toString.toInt >= minCapacity).map(room => room.get("nameZh").asInstanceOf[String]).toSet.toList.sorted
+      customFilter(asScala(rooms), weekday, startUnit, endUnit).filter(room => room.get("seats").toString.toInt >= minCapacity).map(room => room.get("code").asInstanceOf[String]).toSet.toList.sorted
     } else {
       List.empty
     }
